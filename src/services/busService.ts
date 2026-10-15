@@ -157,17 +157,20 @@ export async function fetchBusArrivals(
   busStopCode: string,
   config: BackendConfig = getStoredBackendConfig()
 ): Promise<{ arrivals: BusServiceArrival[]; isLiveApi: boolean; error?: string }> {
-  // If user configured a real backend URL, attempt real request
-  if (!config.useMockSimulation && config.backendBaseUrl) {
+  // If user configured live serverless mode or backend URL
+  if (!config.useMockSimulation) {
     try {
-      const response = await fetch(
-        `${config.backendBaseUrl.replace(/\/$/, '')}/api/bus-arrival?BusStopCode=${encodeURIComponent(busStopCode)}`,
-        {
-          headers: config.ltaApiKey ? { 'AccountKey': config.ltaApiKey } : undefined,
-        }
-      );
+      const endpoint = config.backendBaseUrl
+        ? `${config.backendBaseUrl.replace(/\/$/, '')}/api/busarrival?BusStopCode=${encodeURIComponent(busStopCode)}`
+        : `/api/busarrival?BusStopCode=${encodeURIComponent(busStopCode)}`;
+
+      const response = await fetch(endpoint, {
+        headers: config.ltaApiKey ? { 'AccountKey': config.ltaApiKey } : undefined,
+      });
+
       if (!response.ok) {
-        throw new Error(`Backend returned status ${response.status}: ${response.statusText}`);
+        const errJson = await response.json().catch(() => null);
+        throw new Error(errJson?.error || `Backend returned status ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
       // Parse LTA format: { Services: [{ ServiceNo, Operator, NextBus: {...}, NextBus2, NextBus3 }] }

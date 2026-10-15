@@ -46,28 +46,32 @@ export const BackendConfigModal: React.FC<BackendConfigModalProps> = ({
     }
 
     setTestStatus('testing');
-    setTestMessage('Pinging backend endpoint...');
+    setTestMessage('Testing /api/busarrival endpoint...');
 
     try {
-      const url = `${baseUrl.replace(/\/$/, '')}/api/bus-arrival?BusStopCode=${activeStopCode}`;
+      const url = baseUrl
+        ? `${baseUrl.replace(/\/$/, '')}/api/busarrival?BusStopCode=${activeStopCode}`
+        : `/api/busarrival?BusStopCode=${activeStopCode}`;
+
       const res = await fetch(url, {
         headers: apiKey ? { AccountKey: apiKey } : undefined,
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}: ${res.statusText}`);
+        throw new Error(data.error || data.message || `HTTP error ${res.status}: ${res.statusText}`);
       }
 
-      const data = await res.json();
       setTestStatus('success');
       setTestMessage(
-        `Connected successfully! Received ${
+        `Connected! Received ${
           data.Services ? data.Services.length : Object.keys(data).length
         } services for stop ${activeStopCode}.`
       );
     } catch (err: any) {
       setTestStatus('error');
-      setTestMessage(`Connection test failed: ${err.message}. Make sure CORS is enabled on your backend.`);
+      setTestMessage(`Connection test: ${err.message}`);
     }
   };
 
